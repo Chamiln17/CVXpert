@@ -1,0 +1,32 @@
+ALEX MORGAN
+alex.morgan@example.com | +44 20 7946 0000 | Leeds, UK
+
+PROFILE
+I am a highly skilled and passionate software developer with excellent communication skills. I am a team player who is responsible for delivering outstanding results in a fast-paced environment.
+
+EXPERIENCE
+
+Software Developer, Brightfield Logistics (fictional)
+March 2021 - Present
+- Responsible for the company website and the internal booking tool.
+- Worked on various tasks related to the API.
+- Helped with projects for the warehouse team.
+- Reports were prepared for management every month.
+- Fixed bugs and attended daily stand-ups with the team.
+
+Junior Developer, Northpoint Digital (fictional)
+06/2018 - 02/2020
+- Duties included maintaining the database.
+- I build landing pages for clients using HTML and CSS.
+- Involved in the migration to the new CMS, which was a big project and took a long time and many people were involved in it.
+
+Shop Assistant, Corner Books (fictional)
+2014 - 2016
+- Served customers and handled the till.
+
+EDUCATION
+BSc Computer Science, University of Westmoor (fictional), 2015 - 2018
+A-Levels: Maths, Physics, English
+
+SKILLS
+Python, JavaScript, SQL, Docker, leadership, problem solving, AWS

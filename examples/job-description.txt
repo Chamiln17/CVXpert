@@ -1,0 +1,21 @@
+Backend Developer (Python), Harbourline Freight (fictional)
+Leeds, UK, hybrid
+
+Harbourline Freight moves containers for small importers across the north of England. Our booking platform is a Python service with a PostgreSQL database, and we are looking for a backend developer to help it grow.
+
+What you will do
+- Design and build REST APIs for our booking and tracking platform.
+- Improve the performance and reliability of existing services.
+- Write automated tests and take part in code review.
+- Work with operations staff to turn their requests into features.
+
+What we are looking for
+- 3+ years of professional experience with Python.
+- Experience designing and maintaining relational databases (PostgreSQL preferred).
+- Experience with Docker and a major cloud provider (AWS preferred).
+- Familiarity with CI/CD pipelines.
+- Clear written communication.
+
+Nice to have
+- Experience in logistics or freight.
+- Kubernetes.

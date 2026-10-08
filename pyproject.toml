@@ -1,0 +1,62 @@
+[project]
+name = "cvxpert"
+version = "0.1.0"
+description = "LLM workflow that reviews and rewrites CVs against cited Guidelines"
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Chamel Nadir Bouacha" }]
+dependencies = [
+    "pydantic-ai-slim[openrouter]>=2.54",
+    "pydantic>=2",
+    "pydantic-settings>=2",
+    "pypdf>=5",
+    "python-docx>=1.1",
+    "streamlit>=1.65",
+    "markdown>=3.11",
+    "fpdf2>=2.8.9",
+]
+
+[project.scripts]
+cvxpert = "cvxpert.cli:main"
+
+[dependency-groups]
+dev = [
+    "pytest>=8",
+    "ruff>=0.6",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+target-version = "py311"
+line-length = 88
+extend-exclude = [".claude"]
+
+[tool.ruff.lint]
+select = [
+    "E",   # pycodestyle errors
+    "F",   # pyflakes
+    "I",   # isort
+    "B",   # flake8-bugbear
+    "C4",  # flake8-comprehensions
+    "T20", # flake8-print
+    "RET", # flake8-return
+    "SIM", # flake8-simplify
+    "ARG", # flake8-unused-arguments
+    "PTH", # flake8-use-pathlib
+    "ERA", # eradicate
+    "PL",  # pylint
+    "UP",  # pyupgrade
+    "RUF", # ruff-specific rules
+]
+
+ignore = ["E501"] # line length is left to the formatter; long string literals stay whole
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["PLR2004"] # magic values are the point of test assertions
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
