@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 
-from fakes import FakeModel, review_citing, rewrite
+from fakes import PYTHON_GAP, TAILORING, FakeModel, review_citing, rewrite
 from streamlit.testing.v1 import AppTest
 
 import cvxpert
@@ -83,3 +83,65 @@ def test_the_page_says_where_the_cv_is_sent_before_upload():
 
     assert not at.exception
     assert any("OpenRouter" in i.value for i in at.info)
+
+
+def test_unverified_terms_are_listed_under_check_these_terms(use_model):
+    use_model(
+        FakeModel(
+            review_citing("G09"),
+            rewrites=(rewrite("# Alex Morgan\n\n- Deployed the API on Kubernetes."),),
+        )
+    )
+    at = _page()
+    _upload_and_review(at)
+
+    at.button(key="run-rewrite").click().run()
+
+    assert not at.exception
+    assert "Check these terms" in [s.value for s in at.subheader]
+    assert any(m.value == "- Kubernetes" for m in at.markdown)
+
+
+def test_a_ticked_gap_reaches_the_rewrite_and_an_unticked_one_does_not(use_model):
+    model = use_model(FakeModel(review_citing("G09"), tailoring=TAILORING))
+    at = _page()
+    at.text_area[0].input("Backend Developer. Must have: Docker, AWS.")
+    _upload_and_review(at)
+    assert not at.checkbox(key="confirm-0").value
+    assert not at.checkbox(key="confirm-1").value
+
+    at.checkbox(key="confirm-1").check().run()
+    at.button(key="run-rewrite").click().run()
+
+    assert not at.exception
+    assert at.session_state["rewrite"].confirmed_gaps == ["AWS"]
+    request = str(model.rewrite_requests[0])
+    assert "Confirmed Gaps" in request
+    assert "- AWS" in request
+    assert "- Docker" not in request
+    assert "Confirmed Gaps" in [s.value for s in at.subheader]
+
+
+def test_a_ticked_gap_passes_only_its_label_and_shows_label_and_detail(use_model):
+    model = use_model(
+        FakeModel(
+            review_citing("G09"),
+            tailoring=TAILORING,
+            rewrites=(rewrite("# Alex Morgan\n\n- Ran the API on Kubernetes."),),
+        )
+    )
+    at = _page()
+    at.text_area[0].input("Backend Developer. Must have: Python, 3+ years.")
+    _upload_and_review(at)
+    shown = "".join(m.value for m in at.markdown)
+    assert "Python, 3+ years" in shown
+    assert PYTHON_GAP["detail"] in shown
+
+    at.checkbox(key="confirm-2").check().run()
+    at.button(key="run-rewrite").click().run()
+
+    assert not at.exception
+    rewritten = at.session_state["rewrite"]
+    assert rewritten.confirmed_gaps == ["Python, 3+ years"]
+    assert "- Python, 3+ years" in str(model.rewrite_requests[0])
+    assert rewritten.unverified_terms == ["Kubernetes"]  # a word only in the detail

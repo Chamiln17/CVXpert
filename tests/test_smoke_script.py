@@ -93,3 +93,38 @@ def test_runs_both_phases_and_prints_the_measured_spend(
     assert "Spend: $0.013400" in out
     assert "Limit remaining: $0.736600" in out
     assert "sk-or-test-key" not in out
+
+
+def test_waits_for_openrouter_to_record_the_spend(
+    monkeypatch, smoke, use_model, capsys
+):
+    use_model(FakeModel(review_citing("G02", "G09"), tailoring=TAILORING))
+    # limit_remaining only changes on the third read after the run.
+    unchanged = key(1.0, 0.25, 0.75)
+    key_endpoint(
+        monkeypatch, smoke, unchanged, unchanged, unchanged, key(1.0, 0.25, 0.729)
+    )
+    waits = []
+
+    assert smoke.main(wait=waits.append) == 0
+
+    out = capsys.readouterr().out
+    assert "Spend: $0.021000" in out
+    assert "Limit remaining: $0.729000" in out
+    assert waits == [5, 5]
+
+
+def test_never_prints_zero_spend_when_openrouter_has_not_recorded_it(
+    monkeypatch, smoke, use_model, capsys
+):
+    use_model(FakeModel(review_citing("G02", "G09"), tailoring=TAILORING))
+    key_endpoint(monkeypatch, smoke, *[key(1.0, 0.25, 0.75)] * 7)
+    waits = []
+
+    assert smoke.main(wait=waits.append) == 0
+
+    out = capsys.readouterr().out
+    assert "Spend:" not in out and "$0.000000" not in out
+    assert "not recorded the spend yet" in out
+    assert "activity page" in out
+    assert waits == [5] * 5

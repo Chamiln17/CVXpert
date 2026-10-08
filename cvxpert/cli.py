@@ -1,5 +1,5 @@
-"""Command line: ``cvxpert review <CV> [--job FILE] [--out PATH] [--format md|pdf]``
-and ``cvxpert web``."""
+"""Command line: ``cvxpert review <CV> [--job FILE [--confirm LABEL ...]] [--out PATH]
+[--format md|pdf]`` and ``cvxpert web``."""
 
 import argparse
 import subprocess
@@ -36,6 +36,14 @@ def main(argv: list[str] | None = None) -> int:
         default="md",
         help="Report format (default: md)",
     )
+    review.add_argument(
+        "--confirm",
+        action="append",
+        default=[],
+        metavar="LABEL",
+        help="The label of a Tailoring gap that is true of you, which the Rewrite "
+        "may then use (repeatable; needs --job)",
+    )
     commands.add_parser("web", help="Open the Streamlit page in a browser")
     args = parser.parse_args(argv)
     if args.command == "web":
@@ -45,8 +53,10 @@ def main(argv: list[str] | None = None) -> int:
 
     pydantic_ai.BANNER_ENABLED = False  # keep stderr to the one error line
     try:
+        if args.confirm and not args.job:
+            raise CVXpertError("--confirm needs --job: gaps come from the Tailoring")
         job_description = _read_job(args.job) if args.job else None
-        result = pipeline.run(args.cv, job_description)
+        result = pipeline.run(args.cv, job_description, args.confirm)
         report = render_report(result)
         out = args.out or args.cv.with_name(f"{args.cv.stem}.cvxpert.{args.format}")
         if args.format == "pdf":

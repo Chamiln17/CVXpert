@@ -4,12 +4,14 @@ Makes paid OpenRouter requests. Before any model call it reads the key's credit
 limit from OpenRouter and refuses unless the limit is set and at most $1. It runs
 both phases (keeping every Finding) on examples/cv.txt with
 examples/job-description.txt, writes examples/sample-report.md, and prints the
-spend as the drop in the key's limit remaining from before to after. Not run by
-pytest or CI.
+spend as the drop in the key's limit remaining from before to after. OpenRouter
+records spend with a delay, so it re-reads the key up to 6 times, 5 seconds apart,
+until the limit remaining changes. Not run by pytest or CI.
 """
 
 import json
 import sys
+import time
 import urllib.request
 from pathlib import Path
 
@@ -26,6 +28,8 @@ EXAMPLES = Path(__file__).parents[1] / "examples"
 CV = EXAMPLES / "cv.txt"
 JOB = EXAMPLES / "job-description.txt"
 REPORT = EXAMPLES / "sample-report.md"
+SPEND_READS = 6
+SPEND_READ_GAP_S = 5
 
 
 def fetch_key(api_key: str) -> dict:
@@ -37,20 +41,26 @@ def fetch_key(api_key: str) -> dict:
         return json.load(response)
 
 
-def main() -> int:
+def limit_remaining(api_key: str) -> float:
+    """The key's limit remaining, in dollars."""
+    return float(fetch_key(api_key)["data"]["limit_remaining"])
+
+
+def main(wait=time.sleep) -> int:
     pydantic_ai.BANNER_ENABLED = False
     api_key = Settings().openrouter_api_key.get_secret_value()
     if not api_key:
         return _fail("refusing to run: OPENROUTER_API_KEY is not set")
     try:
         before = fetch_key(api_key)["data"]
-        limit, remaining_before = before["limit"], before["limit_remaining"]
+        limit, remaining = before["limit"], before["limit_remaining"]
     except Exception as e:
         return _fail(f"refusing to run: cannot read the key's limit: {one_line(e)}")
     if limit is None or float(limit) > MAX_LIMIT_USD:
         return _fail(
             f"refusing to run: the key's credit limit is {limit}; set one of at most $1"
         )
+    remaining_before = float(remaining)  # a key with a limit has a number here
 
     try:
         result = pipeline.run(CV, JOB.read_text(encoding="utf-8"))
@@ -60,14 +70,22 @@ def main() -> int:
     sys.stdout.write(f"Report written to {REPORT}\n")
 
     try:
-        remaining_after = float(fetch_key(api_key)["data"]["limit_remaining"])
-        spend = float(remaining_before) - remaining_after
+        for attempt in range(SPEND_READS):
+            if attempt:
+                wait(SPEND_READ_GAP_S)
+            remaining_after = limit_remaining(api_key)
+            if remaining_after != remaining_before:
+                spend = remaining_before - remaining_after
+                sys.stdout.write(f"Spend: ${spend:.6f}\n")
+                sys.stdout.write(f"Limit remaining: ${remaining_after:.6f}\n")
+                break
+        else:
+            sys.stdout.write(
+                "OpenRouter has not recorded the spend yet; check the key's "
+                "activity page.\n"
+            )
     except Exception as e:
         return _fail(f"cannot read the spend after the run: {one_line(e)}")
-    # ponytail: one read right after the run; if OpenRouter records spend late, it
-    # reads low. Check the key's activity page then.
-    sys.stdout.write(f"Spend: ${spend:.6f}\n")
-    sys.stdout.write(f"Limit remaining: ${remaining_after:.6f}\n")
     return 0
 
 

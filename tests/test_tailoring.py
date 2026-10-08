@@ -24,7 +24,14 @@ def test_a_job_description_yields_a_tailoring_from_the_cv_and_the_job(
     result = review_phase(txt_cv, job_description=JOB)
 
     assert result.tailoring.job_match_score == 64
-    assert result.tailoring.gaps == ["Docker", "AWS"]
+    assert [g.label for g in result.tailoring.gaps] == [
+        "Docker",
+        "AWS",
+        "Python, 3+ years",
+    ]
+    assert (
+        result.tailoring.gaps[1].detail == "Cloud hosting is asked for but not shown."
+    )
     assert result.tailoring.emphasis == [
         "Move the booking API work to the top of Experience"
     ]

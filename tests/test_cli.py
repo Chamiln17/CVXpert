@@ -197,7 +197,10 @@ def test_multi_line_findings_and_tailoring_items_stay_one_bullet_each(
 ):
     review = review_citing("G09")
     review["findings"][0]["problem"] = "Duty phrase.\nNo outcome."
-    tailoring = {**TAILORING, "gaps": ["Docker\nin production", "AWS"]}
+    tailoring = {
+        **TAILORING,
+        "gaps": [{"label": "Docker", "detail": "Asked for\nin production."}],
+    }
     use_model(FakeModel(review, tailoring=tailoring))
     out = tmp_path / "report.md"
 
@@ -208,7 +211,7 @@ def test_multi_line_findings_and_tailoring_items_stay_one_bullet_each(
 
     report = out.read_text(encoding="utf-8")
     assert "- Problem: Duty phrase. No outcome.\n" in report
-    assert "- Docker in production\n- AWS\n" in report
+    assert "- Docker: Asked for in production.\n" in report
 
 
 def test_the_report_shows_each_cited_guidelines_rule_and_sources(tmp_path, use_model):
@@ -221,3 +224,75 @@ def test_the_report_shows_each_cited_guidelines_rule_and_sources(tmp_path, use_m
     assert "If the CV has no number, the Rewrite inserts a placeholder" in cited
     assert "MIT-PDF" in cited
     assert "Rule: Recommend removing" not in cited  # G07, not cited
+
+
+def test_unverified_terms_left_after_the_retry_are_listed_in_the_report(
+    tmp_path, use_model
+):
+    use_model(
+        FakeModel(
+            review_citing("G09"),
+            rewrites=(rewrite("# Alex Morgan\n\n- Deployed the API on Kubernetes."),),
+        )
+    )
+    out = tmp_path / "report.md"
+
+    assert main(["review", str(EXAMPLE_CV), "--out", str(out)]) == 0
+
+    report = out.read_text(encoding="utf-8")
+    assert "### Check these terms" in report
+    assert "- Kubernetes" in report
+    assert report.index("## Rewrite") < report.index("### Check these terms")
+
+
+def test_a_report_without_unverified_terms_has_no_check_these_terms_list(
+    tmp_path, use_model
+):
+    use_model(FakeModel(review_citing("G09")))
+    out = tmp_path / "report.md"
+
+    assert main(["review", str(EXAMPLE_CV), "--out", str(out)]) == 0
+
+    assert "Check these terms" not in out.read_text(encoding="utf-8")
+
+
+def test_confirmed_gaps_reach_the_rewrite_and_are_listed_in_the_report(
+    tmp_path, use_model
+):
+    model = use_model(
+        FakeModel(
+            review_citing("G09"),
+            tailoring=TAILORING,
+            rewrites=(
+                rewrite("# Alex Morgan\n\n- Moved the API to PostgreSQL with CI/CD."),
+            ),
+        )
+    )
+    out = tmp_path / "report.md"
+    args = ["review", str(EXAMPLE_CV), "--job", str(EXAMPLE_JOB), "--out", str(out)]
+
+    assert main([*args, "--confirm", "PostgreSQL", "--confirm", "CI/CD"]) == 0
+
+    report = out.read_text(encoding="utf-8")
+    rewrite_section = report.split("## Rewrite")[1]
+    assert "### Confirmed Gaps" in rewrite_section
+    assert "- PostgreSQL\n- CI/CD\n" in rewrite_section
+    assert "Check these terms" not in report
+    assert "- PostgreSQL" in str(model.rewrite_requests[0])
+
+
+def test_confirm_without_a_job_description_exits_non_zero_with_one_line(
+    tmp_path, capsys, use_model
+):
+    model = use_model(FakeModel(review_citing("G09")))
+    out = tmp_path / "report.md"
+
+    assert (
+        main(["review", str(EXAMPLE_CV), "--confirm", "Docker", "--out", str(out)]) != 0
+    )
+
+    err = capsys.readouterr().err
+    assert err.count("\n") == 1
+    assert "--confirm" in err
+    assert not out.exists()
+    assert model.review_requests == []

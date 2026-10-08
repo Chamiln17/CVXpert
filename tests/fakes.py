@@ -30,17 +30,29 @@ def review_citing(*guideline_ids: str) -> dict:
     }
 
 
+# A gap's detail holds words and numbers its label lacks ("Kubernetes", "5"), so tests
+# can prove that confirming a gap allows only its label.
+PYTHON_GAP = {
+    "label": "Python, 3+ years",
+    "detail": "The job asks for Python on Kubernetes; the CV shows 5 projects, none "
+    "in Python.",
+}
 TAILORING = {
     "job_match_score": 64,
     "summary": "Strong Python fit; cloud and Docker are not shown.",
     "matches": ["Python web services"],
-    "gaps": ["Docker", "AWS"],
+    "gaps": [
+        {"label": "Docker", "detail": "Asked for; the CV does not mention containers."},
+        {"label": "AWS", "detail": "Cloud hosting is asked for but not shown."},
+        PYTHON_GAP,
+    ],
     "emphasis": ["Move the booking API work to the top of Experience"],
 }
 
 
-# No digits, so it passes the Fabrication guard for any CV.
-REWRITE = {"markdown": "# Jane Doe\n\n## Experience\n\n- Built [what] for the website."}
+# No digits and no names, so it passes the Fabrication guard and the Unverified Term
+# check for any CV.
+REWRITE = {"markdown": "# [Name]\n\n## Experience\n\n- Built [what] for the website."}
 
 
 def rewrite(markdown: str) -> dict:

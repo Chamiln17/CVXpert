@@ -11,12 +11,15 @@ from cvxpert.export import (
     ESTIMATE,
     PRIVACY_NOTICE,
     finding_heading,
+    gap_text,
     guideline_text,
     markdown_to_pdf,
+    rewrite_lists,
 )
 from cvxpert.steps import SEVERITIES
 
 _ESTIMATE = f"{ESTIMATE.capitalize()}."
+_CONFIRM_KEY = "confirm-"  # the "I have this" checkbox key prefix, plus the gap index
 
 
 def _review(upload, job_description: str) -> pipeline.ReviewPhaseResult:
@@ -37,6 +40,8 @@ job_description = st.text_area("Job Description (optional)")
 
 if upload and st.button("Review", key="run-review"):
     st.session_state.pop("rewrite", None)
+    for key in [k for k in st.session_state if str(k).startswith(_CONFIRM_KEY)]:
+        del st.session_state[key]  # a new Tailoring starts with every gap unticked
     try:
         st.session_state["result"] = _review(upload, job_description)
     except Exception as e:  # any failure: one readable line, no traceback
@@ -75,9 +80,23 @@ if result:
     if not review.findings:
         st.write("No Findings.")
 
+    confirmed = []
+    if result.tailoring and result.tailoring.gaps:
+        st.header("Gaps")
+        st.caption(
+            "Asked for in the Job Description but not shown in the CV. Tick a gap "
+            "only if it is true of you; the Rewrite may then use it."
+        )
+        for i, gap in enumerate(result.tailoring.gaps):
+            st.markdown(f"- {gap_text(gap)}")
+            if st.checkbox("I have this", key=f"{_CONFIRM_KEY}{i}"):
+                confirmed.append(gap.label)  # only the label, never the detail
+
     if st.button("Rewrite", key="run-rewrite"):
         try:
-            st.session_state["rewrite"] = pipeline.rewrite_phase(result, kept)
+            st.session_state["rewrite"] = pipeline.rewrite_phase(
+                result, kept, confirmed
+            )
         except Exception as e:  # any failure: one readable line, no traceback
             st.session_state.pop("rewrite", None)
             _show_error(e)
@@ -85,8 +104,11 @@ if result:
 rewrite = st.session_state.get("rewrite")
 if rewrite:
     st.header("Rewrite")
-    st.subheader("Placeholders to fill in")
-    st.markdown("\n".join(f"- `{p}`" for p in rewrite.placeholders) or "None.")
+    for heading, note, items in rewrite_lists(rewrite):
+        st.subheader(heading)
+        if note:
+            st.caption(note)
+        st.markdown("\n".join(f"- {item}" for item in items) or "None.")
     st.subheader("Rewritten CV")
     st.markdown(rewrite.markdown)
     md_column, pdf_column = st.columns(2)

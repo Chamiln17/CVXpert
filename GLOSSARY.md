@@ -48,16 +48,24 @@ The model's 0–100 estimate of the CV's quality; an opinion, not a measurement.
 The model's 0–100 estimate of how well the CV fits the Job Description; exists only when a Job Description was given.
 
 **Tailoring**:
-The comparison of a CV against a Job Description: what matches, what is missing, and what to emphasise.
+The comparison of a CV against a Job Description: what matches, what is missing, and what to emphasise. Each missing item, a gap, has a short label (the skill or requirement in a few words, such as "Python, 3+ years") and a detail saying why it is a gap.
 _Avoid_: Job match analysis, optimisation
 
 **Rewrite**:
-A new version of the CV that applies the Findings the candidate kept and Tailoring, using only facts present in the CV.
+A new version of the CV that applies the Findings the candidate kept and Tailoring, using only facts present in the CV or Confirmed Gaps.
 _Avoid_: Enhanced CV, improved CV
 
 **Placeholder**:
 A bracketed gap in the Rewrite, such as `[X%]`, where a fact would strengthen a line but the CV does not contain it; the candidate fills it in.
 
+**Confirmed Gap**:
+The label of a Tailoring gap that the candidate states is true of them; the Rewrite may then use it as a fact. The gap's detail is never part of it.
+_Avoid_: Added skill, accepted gap
+
+**Unverified Term**:
+A name, tool, acronym or title in the Rewrite that neither the CV nor a Confirmed Gap contains; shown to the candidate to check rather than silently kept.
+_Avoid_: Suspicious word, flagged term
+
 **Fabrication**:
-Any number, employer, title, tool, date or achievement in the Rewrite that the CV does not contain. Never allowed.
+Any number, employer, title, tool, date or achievement in the Rewrite that neither the CV nor a Confirmed Gap contains. Never allowed.
 _Avoid_: Embellishment, enhancement

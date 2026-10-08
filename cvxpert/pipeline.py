@@ -1,7 +1,7 @@
 """The Pipeline: parse -> review -> tailor in the review phase; rewrite in the
 rewrite phase, so a caller can drop Findings in between."""
 
-from collections.abc import Collection
+from collections.abc import Collection, Sequence
 from pathlib import Path
 
 from pydantic import BaseModel
@@ -35,18 +35,32 @@ def review_phase(
 
 
 def rewrite_phase(
-    result: ReviewPhaseResult, kept_ids: Collection[str]
+    result: ReviewPhaseResult,
+    kept_ids: Collection[str],
+    confirmed_gaps: Sequence[str] = (),
 ) -> steps.Rewrite:
     """Rewrite the CV applying only the kept Findings, plus the Tailoring if any.
 
-    Raises FabricationError rather than return a Rewrite with an invented number.
+    Confirmed Gaps are gap labels the candidate states are true; the Rewrite
+    may use them.
+
+    Raises FabricationError rather than return a Rewrite with an invented number;
+    Unverified Terms left after the retry come back in ``unverified_terms``.
     """
     kept = [f for f in result.review.findings if f.id in kept_ids]
-    return steps.rewrite(result.cv, kept, result.tailoring, config.get_model())
+    return steps.rewrite(
+        result.cv, kept, result.tailoring, config.get_model(), confirmed_gaps
+    )
 
 
-def run(cv_path: Path, job_description: str | None = None) -> PipelineResult:
+def run(
+    cv_path: Path,
+    job_description: str | None = None,
+    confirmed_gaps: Sequence[str] = (),
+) -> PipelineResult:
     """Run both phases keeping every Finding; the CLI calls this."""
     result = review_phase(cv_path, job_description)
-    rewrite = rewrite_phase(result, {f.id for f in result.review.findings})
+    rewrite = rewrite_phase(
+        result, {f.id for f in result.review.findings}, confirmed_gaps
+    )
     return PipelineResult(**dict(result), rewrite=rewrite)
